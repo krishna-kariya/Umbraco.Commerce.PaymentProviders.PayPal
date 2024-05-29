@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace Umbraco.Commerce.PaymentProviders.PayPal.Api.Models
 {
@@ -6,25 +6,25 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal.Api.Models
 
     public class PayPalOrderApplicationContext
     {
-        [JsonProperty("brand_name")]
+        [JsonPropertyName("brand_name")]
         public string BrandName { get; set; }
 
-        [JsonProperty("locale")]
+        [JsonPropertyName("locale")]
         public string Locale { get; set; }
 
-        [JsonProperty("landing_page")]
+        [JsonPropertyName("landing_page")]
         public string LandingPage { get; set; }
 
-        [JsonProperty("shipping_preference")]
+        [JsonPropertyName("shipping_preference")]
         public string ShippingPreference { get; set; }
 
-        [JsonProperty("user_action")]
+        [JsonPropertyName("user_action")]
         public string UserAction { get; set; }
 
-        [JsonProperty("return_url")]
+        [JsonPropertyName("return_url")]
         public string ReturnUrl { get; set; }
 
-        [JsonProperty("cancel_url")]
+        [JsonPropertyName("cancel_url")]
         public string CancelUrl { get; set; }
 
         public PayPalOrderApplicationContext()

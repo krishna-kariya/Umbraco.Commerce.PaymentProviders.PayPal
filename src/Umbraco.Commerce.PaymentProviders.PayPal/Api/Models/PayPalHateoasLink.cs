@@ -1,16 +1,16 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace Umbraco.Commerce.PaymentProviders.PayPal.Api.Models
 {
     public class PayPalHateoasLink
     {
-        [JsonProperty("href")]
+        [JsonPropertyName("href")]
         public string Href { get; set; }
 
-        [JsonProperty("rel")]
+        [JsonPropertyName("rel")]
         public string Rel { get; set; }
 
-        [JsonProperty("method")]
+        [JsonPropertyName("method")]
         public string Method { get; set; }
     }
 }

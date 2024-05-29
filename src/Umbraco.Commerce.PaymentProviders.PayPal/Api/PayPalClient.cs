@@ -1,13 +1,12 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Runtime.Caching;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Flurl.Http;
-using Flurl.Http.Newtonsoft;
-using Newtonsoft.Json;
 using Umbraco.Commerce.PaymentProviders.PayPal.Api.Models;
 
 namespace Umbraco.Commerce.PaymentProviders.PayPal.Api
@@ -15,6 +14,10 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal.Api
     public class PayPalClient
     {
         private static readonly MemoryCache _accessTokenCache = new MemoryCache("PayPalClient_AccessTokenCache");
+        private static readonly JsonSerializerOptions DefaultJsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
 
         public const string SandboxApiUrl = "https://api.sandbox.paypal.com";
 
@@ -32,7 +35,7 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal.Api
             return await RequestAsync("/v2/checkout/orders", async (req, ct) => await req
                 .WithHeader("Prefer", "return=representation")
                 .PostJsonAsync(request, cancellationToken: ct)
-                .ReceiveJson<PayPalOrder>().ConfigureAwait(false),
+                .ReceiveJson<PayPalOrder>(DefaultJsonOptions).ConfigureAwait(false),
                 cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -42,7 +45,7 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal.Api
             return await RequestAsync($"/v2/checkout/orders/{orderId}", async (req, ct) => await req
                 .WithHeader("Prefer", "return=representation")
                 .GetAsync(cancellationToken: ct)
-                .ReceiveJson<PayPalOrder>().ConfigureAwait(false),
+                .ReceiveJson<PayPalOrder>(DefaultJsonOptions).ConfigureAwait(false),
                 cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -52,7 +55,7 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal.Api
             return await RequestAsync($"/v2/checkout/orders/{orderId}/authorize", async (req, ct) => await req
                 .WithHeader("Prefer", "return=representation")
                 .PostJsonAsync(null, cancellationToken: ct)
-                .ReceiveJson<PayPalOrder>().ConfigureAwait(false),
+                .ReceiveJson<PayPalOrder>(DefaultJsonOptions).ConfigureAwait(false),
                 cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -62,7 +65,7 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal.Api
             return await RequestAsync($"/v2/checkout/orders/{orderId}/capture", async (req, ct) => await req
                 .WithHeader("Prefer", "return=representation")
                 .PostJsonAsync(null, cancellationToken: ct)
-                .ReceiveJson<PayPalOrder>().ConfigureAwait(false),
+                .ReceiveJson<PayPalOrder>(DefaultJsonOptions).ConfigureAwait(false),
                 cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -72,7 +75,7 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal.Api
             return await RequestAsync($"/v2/payments/authorizations/{paymentId}/capture", async (req, ct) => await req
                 .WithHeader("Prefer", "return=representation")
                 .PostJsonAsync(new { final_capture = true }, cancellationToken: ct)
-                .ReceiveJson<PayPalCapturePayment>().ConfigureAwait(false),
+                .ReceiveJson<PayPalCapturePayment>(DefaultJsonOptions).ConfigureAwait(false),
                 cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -81,7 +84,7 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal.Api
         {
             return await RequestAsync($"/v2/payments/captures/{paymentId}/refund", async (req, ct) => await req
                 .PostJsonAsync(null, cancellationToken: ct)
-                .ReceiveJson<PayPalRefundPayment>().ConfigureAwait(false),
+                .ReceiveJson<PayPalRefundPayment>(DefaultJsonOptions).ConfigureAwait(false),
                 cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -108,34 +111,31 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal.Api
                     stream.Seek(0, SeekOrigin.Begin);
                 }
 
-                using (var reader = new StreamReader(stream))
+                var json = await JsonSerializer.DeserializeAsync<string>(stream, DefaultJsonOptions, cancellationToken).ConfigureAwait(false);
+
+                var webhookSignatureRequest = new PayPalVerifyWebhookSignatureRequest
                 {
-                    var json = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+                    AuthAlgorithm = headers.GetValues("paypal-auth-algo").FirstOrDefault(),
+                    CertUrl = headers.GetValues("paypal-cert-url").FirstOrDefault(),
+                    TransmissionId = headers.GetValues("paypal-transmission-id").FirstOrDefault(),
+                    TransmissionSignature = headers.GetValues("paypal-transmission-sig").FirstOrDefault(),
+                    TransmissionTime = headers.GetValues("paypal-transmission-time").FirstOrDefault(),
+                    WebhookId = _config.WebhookId,
+                    WebhookEvent = new { }
+                };
 
-                    var webhookSignatureRequest = new PayPalVerifyWebhookSignatureRequest
-                    {
-                        AuthAlgorithm = headers.GetValues("paypal-auth-algo").FirstOrDefault(),
-                        CertUrl = headers.GetValues("paypal-cert-url").FirstOrDefault(),
-                        TransmissionId = headers.GetValues("paypal-transmission-id").FirstOrDefault(),
-                        TransmissionSignature = headers.GetValues("paypal-transmission-sig").FirstOrDefault(),
-                        TransmissionTime = headers.GetValues("paypal-transmission-time").FirstOrDefault(),
-                        WebhookId = _config.WebhookId,
-                        WebhookEvent = new { }
-                    };
+                var webhookSignatureRequestStr = JsonSerializer.Serialize(webhookSignatureRequest, DefaultJsonOptions).Replace("{}", json);
 
-                    var webhookSignatureRequestStr = JsonConvert.SerializeObject(webhookSignatureRequest).Replace("{}", json);
+                var result = await RequestAsync("/v1/notifications/verify-webhook-signature", async (req, ct) => await req
+                    .WithHeader("Content-Type", "application/json")
+                    .PostStringAsync(webhookSignatureRequestStr, cancellationToken: ct)
+                    .ReceiveJson<PayPalVerifyWebhookSignatureResult>(DefaultJsonOptions).ConfigureAwait(false),
+                    cancellationToken)
+                    .ConfigureAwait(false);
 
-                    var result = await RequestAsync("/v1/notifications/verify-webhook-signature", async (req, ct) => await req
-                        .WithHeader("Content-Type", "application/json")
-                        .PostStringAsync(webhookSignatureRequestStr, cancellationToken: ct)
-                        .ReceiveJson<PayPalVerifyWebhookSignatureResult>().ConfigureAwait(false),
-                        cancellationToken)
-                        .ConfigureAwait(false);
-
-                    if (result != null && result.VerificationStatus == "SUCCESS")
-                    {
-                        payPalWebhookEvent = JsonConvert.DeserializeObject<PayPalWebhookEvent>(json);
-                    }
+                if (result != null && result.VerificationStatus == "SUCCESS")
+                {
+                    payPalWebhookEvent = JsonSerializer.Deserialize<PayPalWebhookEvent>(json, DefaultJsonOptions);
                 }
             }
 
@@ -150,10 +150,6 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal.Api
             {
                 var accessToken = await GetAccessTokenAsync(false, cancellationToken).ConfigureAwait(false);
                 var req = new FlurlRequest(_config.BaseUrl + url)
-                    .WithSettings(x => x.JsonSerializer = new NewtonsoftJsonSerializer(new JsonSerializerSettings
-                    {
-                        NullValueHandling = NullValueHandling.Ignore
-                    }))
                     .WithOAuthBearerToken(accessToken);
 
                 result = await func.Invoke(req, cancellationToken).ConfigureAwait(false);
@@ -164,10 +160,6 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal.Api
                 {
                     var accessToken = await GetAccessTokenAsync(true, cancellationToken).ConfigureAwait(false);
                     var req = new FlurlRequest(_config.BaseUrl + url)
-                        .WithSettings(x => x.JsonSerializer = new NewtonsoftJsonSerializer(new JsonSerializerSettings
-                        {
-                            NullValueHandling = NullValueHandling.Ignore
-                        }))
                         .WithOAuthBearerToken(accessToken);
 
                     result = await func.Invoke(req, cancellationToken).ConfigureAwait(false);
@@ -201,13 +193,9 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal.Api
         private async Task<PayPalAccessTokenResult> AuthenticateAsync(CancellationToken cancellationToken = default)
         {
             return await new FlurlRequest(_config.BaseUrl + "/v1/oauth2/token")
-                .WithSettings(x => x.JsonSerializer = new NewtonsoftJsonSerializer(new JsonSerializerSettings
-                {
-                    NullValueHandling = NullValueHandling.Ignore
-                }))
                 .WithBasicAuth(_config.ClientId, _config.Secret)
                 .PostUrlEncodedAsync(new { grant_type = "client_credentials" }, cancellationToken: cancellationToken)
-                .ReceiveJson<PayPalAccessTokenResult>()
+                .ReceiveJson<PayPalAccessTokenResult>(DefaultJsonOptions)
                 .ConfigureAwait(false);
         }
     }

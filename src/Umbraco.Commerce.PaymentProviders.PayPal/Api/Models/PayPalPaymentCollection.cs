@@ -1,16 +1,16 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace Umbraco.Commerce.PaymentProviders.PayPal.Api.Models
 {
     public class PayPalPaymentCollection
     {
-        [JsonProperty("authorizations")]
+        [JsonPropertyName("authorizations")]
         public PayPalAuthorizationPayment[] Authorizations { get; set; }
 
-        [JsonProperty("captures")]
+        [JsonPropertyName("captures")]
         public PayPalCapturePayment[] Captures { get; set; }
 
-        [JsonProperty("refunds")]
+        [JsonPropertyName("refunds")]
         public PayPalRefundPayment[] Refunds { get; set; }
 
     }

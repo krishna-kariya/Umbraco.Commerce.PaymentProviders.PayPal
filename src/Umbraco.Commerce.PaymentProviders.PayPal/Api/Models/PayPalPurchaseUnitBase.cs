@@ -1,16 +1,16 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace Umbraco.Commerce.PaymentProviders.PayPal.Api.Models
 {
     public class PayPalPurchaseUnitBase
     {
-        [JsonProperty("custom_id")]
+        [JsonPropertyName("custom_id")]
         public string CustomId { get; set; }
 
-        [JsonProperty("description")]
+        [JsonPropertyName("description")]
         public string Description { get; set; }
 
-        [JsonProperty("amount")]
+        [JsonPropertyName("amount")]
         public PayPalAmount Amount { get; set; }
     }
 }

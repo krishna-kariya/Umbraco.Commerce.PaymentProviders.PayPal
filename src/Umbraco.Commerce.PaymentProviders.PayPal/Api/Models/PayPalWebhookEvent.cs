@@ -1,5 +1,5 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Umbraco.Commerce.PaymentProviders.PayPal.Api.Models
 {
@@ -19,31 +19,31 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal.Api.Models
             }
         }
 
-        [JsonProperty("id")]
+        [JsonPropertyName("id")]
         public string Id { get; set; }
 
-        [JsonProperty("event_type")]
+        [JsonPropertyName("event_type")]
         public string EventType { get; set; }
 
-        [JsonProperty("event_version")]
+        [JsonPropertyName("event_version")]
         public string EventVersion { get; set; }
 
-        [JsonProperty("resource_type")]
+        [JsonPropertyName("resource_type")]
         public string ResourceType { get; set; }
 
-        [JsonProperty("resource_version")]
+        [JsonPropertyName("resource_version")]
         public string ResourceVersion { get; set; }
 
-        [JsonProperty("summary")]
+        [JsonPropertyName("summary")]
         public string Summary { get; set; }
 
-        [JsonProperty("resource")]
-        public JObject Resource { get; set; }
+        [JsonPropertyName("resource")]
+        public JsonNode Resource { get; set; }
 
-        [JsonProperty("create_time")]
+        [JsonPropertyName("create_time")]
         public string CreateTime { get; set; }
 
-        [JsonProperty("links")]
+        [JsonPropertyName("links")]
         public PayPalHateoasLink[] Links { get; set; }
     }
 }

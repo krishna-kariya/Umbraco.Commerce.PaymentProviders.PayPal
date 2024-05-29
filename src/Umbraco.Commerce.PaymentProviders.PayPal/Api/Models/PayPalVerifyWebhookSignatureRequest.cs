@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace Umbraco.Commerce.PaymentProviders.PayPal.Api.Models
 {
@@ -6,25 +6,25 @@ namespace Umbraco.Commerce.PaymentProviders.PayPal.Api.Models
 
     public class PayPalVerifyWebhookSignatureRequest
     {
-        [JsonProperty("auth_algo")]
+        [JsonPropertyName("auth_algo")]
         public string AuthAlgorithm { get; set; }
 
-        [JsonProperty("cert_url")]
+        [JsonPropertyName("cert_url")]
         public string CertUrl { get; set; }
 
-        [JsonProperty("transmission_id")]
+        [JsonPropertyName("transmission_id")]
         public string TransmissionId { get; set; }
 
-        [JsonProperty("transmission_sig")]
+        [JsonPropertyName("transmission_sig")]
         public string TransmissionSignature { get; set; }
 
-        [JsonProperty("transmission_time")]
+        [JsonPropertyName("transmission_time")]
         public string TransmissionTime { get; set; }
 
-        [JsonProperty("webhook_id")]
+        [JsonPropertyName("webhook_id")]
         public string WebhookId { get; set; }
 
-        [JsonProperty("webhook_event")]
+        [JsonPropertyName("webhook_event")]
         public object WebhookEvent { get; set; }
     }
 }

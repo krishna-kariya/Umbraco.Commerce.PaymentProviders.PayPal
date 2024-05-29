@@ -1,13 +1,13 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace Umbraco.Commerce.PaymentProviders.PayPal.Api.Models
 {
     public class PayPalPurchaseUnit : PayPalPurchaseUnitBase
     {
-        [JsonProperty("id")]
+        [JsonPropertyName("id")]
         public string Id { get; set; }
 
-        [JsonProperty("payments")]
+        [JsonPropertyName("payments")]
         public PayPalPaymentCollection Payments { get; set; }
     }
 }
